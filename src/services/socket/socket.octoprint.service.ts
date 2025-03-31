@@ -14,6 +14,8 @@ import {
   PrinterNotification,
   PrinterState,
   PrinterStatus,
+  PrusaMMUActions,
+  PrusaMMUMessage,
   SocketAuth,
 } from '../../model';
 import {
@@ -27,6 +29,7 @@ import {
 import { ConfigService } from '../../services/config.service';
 import { ConversionService } from '../../services/conversion.service';
 import { NotificationService } from '../../services/notification.service';
+import { PrusaMMUService } from '../prusammu/prusa-mmu.service';
 import { SystemService } from '../system/system.service';
 import { SocketService } from './socket.service';
 
@@ -50,6 +53,7 @@ export class OctoPrintSocketService implements SocketService {
     private systemService: SystemService,
     private conversionService: ConversionService,
     private notificationService: NotificationService,
+    private prusaMMUService: PrusaMMUService,
     private http: HttpClient,
   ) {
     this.printerStatusSubject = new ReplaySubject<PrinterStatus>(1);
@@ -176,6 +180,10 @@ export class OctoPrintSocketService implements SocketService {
       {
         check: (plugin: string) => plugin === 'octodash' && this.configService.isCompanionPluginEnabled(),
         handler: (message: unknown) => this.extractFanSpeed(message as CompanionData),
+      },
+      {
+        check: (plugin: string) => plugin === 'prusammu' && this.configService.isPrusaMMUPluginEnabled(),
+        handler: (message: unknown) => this.handlePrusaMMU(message as PrusaMMUMessage),
       },
     ];
 
@@ -447,6 +455,16 @@ export class OctoPrintSocketService implements SocketService {
         }),
       )
       .subscribe();
+  }
+
+  //==== PrusaMMU ====//
+  private handlePrusaMMU(message: PrusaMMUMessage) {
+    // Show Filament-chooser
+    if (message.action === PrusaMMUActions.SHOW) {
+      this.prusaMMUService.showHideFilamentPicker(true);
+    } else if (message.action === PrusaMMUActions.CLOSE) {
+      this.prusaMMUService.showHideFilamentPicker(false);
+    }
   }
 
   //==== Subscribables ====//
